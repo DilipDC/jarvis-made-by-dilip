@@ -28,3 +28,9 @@ def test_open_interpreter_health_optional():
     from jarvis_app.integrations.openinterpreter import OpenInterpreterAdapter
     h=OpenInterpreterAdapter(enabled=True).health()
     assert h["platform"]=="Linux" or h["available"] is False
+
+
+def test_observed_runtime_intents():
+    from jarvis_app.agent.fast_intent import classify
+    assert classify("Open Firefox")=="open_app"
+    assert classify("What do you remember?")=="memory_query"
