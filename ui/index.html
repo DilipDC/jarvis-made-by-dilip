@@ -1,22 +1,54 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#16003b"><title>JARVIS — BUILT BY DILIP</title><link rel="stylesheet" href="/ui/style.css"></head>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#12002f"><title>JARVIS — BUILT BY DILIP</title>
+<link rel="stylesheet" href="/ui/style.css">
+</head>
 <body>
 <main class="app">
-  <header class="top"><div><div class="brand">JARVIS</div><div class="creator">BUILT BY DILIP</div></div><div id="net" class="online">● ONLINE</div></header>
-  <section class="hero">
-    <div class="orb-zone"><div class="stars"></div><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="core"><div class="core-glow"></div><span id="state">IDLE</span></div></div>
-    <div id="answer" class="answer">Matt, what can I assist you with?</div>
-    <button id="micBtn" class="mic" aria-label="Speak to JARVIS">●</button>
-    <div class="hint">TAP TO SPEAK · JARVIS CAN SEARCH, REMEMBER AND ACT</div>
-  </section>
-  <section class="composer"><form id="chat"><input id="input" placeholder="Tell JARVIS what to do…" autocomplete="off"><button>ASK</button></form><div class="quick"><button data-cmd="Who created you?">IDENTITY</button><button data-cmd="What can you do?">POWERS</button><button data-cmd="Search the web for the latest AI news">WEB</button><button data-cmd="Jarvis status">STATUS</button></div></section>
-  <section class="drawer">
-    <div class="card"><b>AGENTS</b><span id="agents">—</span></div>
-    <div class="card"><b>MCP</b><span id="mcp">—</span></div>
-    <div class="card"><b>RAM</b><span id="ram">—</span></div>
-    <div class="card"><b>MODEL</b><span id="model">—</span></div>
-  </section>
-  <section class="history"><div class="history-head"><b>CONVERSATION</b><button id="clear">CLEAR</button></div><div id="messages"></div></section>
+<header class="top">
+  <div><div class="brand">JARVIS</div><div class="creator">BUILT BY DILIP · LOCAL AI OPERATING LAYER</div></div>
+  <div id="net" class="online">● ONLINE</div>
+</header>
+
+<section class="hero">
+  <div class="orb-zone">
+    <div class="stars"></div><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+    <div class="core"><div class="core-glow"></div><span id="state">IDLE</span></div>
+  </div>
+  <div id="answer" class="answer">Ready. Ask JARVIS to search, remember, research or act.</div>
+  <button id="micBtn" class="mic" aria-label="Speak to JARVIS"></button>
+  <div class="hint">TAP TO SPEAK · TEXT OR VOICE · LIVE EVENTS</div>
+</section>
+
+<section class="composer">
+  <form id="chat"><input id="input" placeholder="Tell JARVIS what to do…" autocomplete="off"><button>ASK</button></form>
+  <div class="quick">
+    <button data-cmd="Who created you?">IDENTITY</button>
+    <button data-cmd="What can you do?">POWERS</button>
+    <button data-cmd="Open browser and search for laptop">BROWSER</button>
+    <button data-cmd="What is the current Jio stock price?">LIVE PRICE</button>
+  </div>
+</section>
+
+<section class="drawer">
+  <div class="card"><b>AGENTS</b><span id="agents">—</span><small id="agentState">routing ready</small></div>
+  <div class="card"><b>MCP</b><span id="mcp">—</span><small id="mcpState">checking…</small></div>
+  <div class="card"><b>RAM</b><span id="ram">—</span><small id="ramState">system</small></div>
+  <div class="card"><b>MODEL</b><span id="model">—</span><small id="modelState">backend</small></div>
+</section>
+
+<section class="livebar">
+  <div><span class="dot"></span><b>LIVE</b><span id="liveText">Waiting for an event…</span></div>
+  <div id="nextReminder">No reminder scheduled</div>
+</section>
+
+<section class="history">
+  <div class="history-head"><b>CONVERSATION</b><button id="clear">CLEAR</button></div>
+  <div id="messages"></div>
+</section>
 </main>
 <script src="/ui/app.js"></script>
-</body></html>
+</body>
+</html>
