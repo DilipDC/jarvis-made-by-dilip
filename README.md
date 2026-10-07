@@ -220,6 +220,20 @@ Install the optional desktop backend:
 
     python -m pip install -e ".[computer]"
 
+
+## Hybrid RAG
+
+JARVIS keeps SQLite FTS as the low-RAM retrieval baseline and supports optional semantic reranking with `sentence-transformers` and `all-MiniLM-L6-v2`. This gives a practical hybrid path: lexical retrieval stays cheap, while semantic reranking is enabled only when requested.
+
+Enable it with:
+
+    JARVIS_SEMANTIC_RAG=1
+
+Install the optional RAG extra:
+
+    python -m pip install -e ".[rag]"
+
+Leave semantic RAG disabled on a very small machine when RAM is more important than retrieval quality.
 ## MCP: two ready integrations
 
 JARVIS now includes two lazy-loaded MCP integrations based on the official MCP server ecosystem:
