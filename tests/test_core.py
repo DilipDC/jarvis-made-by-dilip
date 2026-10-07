@@ -16,3 +16,15 @@ def test_memory_and_cache():
 
 def test_permissions():
     p=PermissionManager(); assert p.check('open chrome').level==SAFE; assert p.check('delete file').level==CONFIRM; assert p.check('disable firewall').level==BLOCKED
+
+
+def test_computer_autopilot_intent_and_loop_guard():
+    from jarvis_app.agent.fast_intent import classify
+    from jarvis_app.integrations.loop_guard import LoopGuard
+    assert classify("control my computer and open Firefox")=="computer_autopilot"
+    g=LoopGuard(max_steps=3,max_repeats=1); assert g.allow("open_app",{"name":"firefox"})[0]; assert not g.allow("open_app",{"name":"firefox"})[0]
+
+def test_open_interpreter_health_optional():
+    from jarvis_app.integrations.openinterpreter import OpenInterpreterAdapter
+    h=OpenInterpreterAdapter(enabled=True).health()
+    assert h["platform"]=="Linux" or h["available"] is False
