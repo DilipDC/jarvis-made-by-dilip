@@ -47,7 +47,8 @@ class MCPManager:
     async def call(self,name,tool_name,arguments=None):
         server=self.servers[name]
         if server["trust"]=="BLOCKED":raise PermissionError("MCP server blocked by trust policy")
-        if not self.sdk_available:raise RuntimeError("MCP SDK not installed. Install with: python -m pip install -e ".[mcp]"")
+        if not self.sdk_available:
+            raise RuntimeError("MCP SDK not installed. Install with: python -m pip install -e '.[mcp]'")
         from mcp import ClientSession
         from mcp.client.stdio import stdio_client
         async with stdio_client(self._params(server)) as (read,write):
