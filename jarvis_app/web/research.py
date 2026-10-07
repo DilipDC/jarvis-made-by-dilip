@@ -18,7 +18,7 @@ class _TextExtractor(HTMLParser):
     def text(self):return " ".join(self.parts)
 
 class WebResearchAgent:
-    """Low-RAM search/fetch/synthesis pipeline with uncached live-query mode."""
+    """Low-RAM search/fetch/synthesis pipeline with snippet fallback."""
     def __init__(self,searcher,timeout=10,max_results=4,max_chars_per_page=5000):
         self.searcher=searcher;self.timeout=timeout;self.max_results=max_results;self.max_chars_per_page=max_chars_per_page
 
@@ -39,12 +39,19 @@ class WebResearchAgent:
         if cache and key and not live:
             hit=cache.get(key)
             if hit:return {**hit,"cache":"hit"}
-        search=self.searcher.search(query);sources=[];context=[]
+        search=self.searcher.search(query);sources=[];context=[];snippet_context=[]
         for idx,item in enumerate(search.get("results",[])[:self.max_results],1):
             body=self._fetch(item["url"])
-            sources.append({"id":idx,"title":item["title"],"url":item["url"],"content_available":bool(body)})
-            if body:context.append(f"[SOURCE {idx}] {item['title']}\nURL: {item['url']}\nCONTENT:\n{body}")
-        if not context:answer="I could not retrieve readable source content. The search results are listed below."
+            snippet=item.get("snippet","")
+            sources.append({"id":idx,"title":item["title"],"url":item["url"],"snippet":snippet,"content_available":bool(body)})
+            if body:
+                context.append(f"[SOURCE {idx}] {item['title']}\nURL: {item['url']}\nCONTENT:\n{body}")
+            elif snippet:
+                snippet_context.append(f"[SEARCH RESULT {idx}] {item['title']}\nURL: {item['url']}\nSNIPPET: {snippet}")
+        if not context and not snippet_context:
+            answer="I could not retrieve readable source content or search snippets."
+        elif not context:
+            answer="I could not open the source pages, so this answer is based on search-result snippets:\n\n"+"\n\n".join(snippet_context)
         elif ollama and model:
             prompt=("Answer using ONLY the supplied web sources. For current prices/news, prefer the newest source and include its retrieval context. "
                     "If the entity is not publicly listed or the sources disagree, say so. Never invent a value. Cite claims as [1], [2], etc.\n\n"
@@ -52,8 +59,10 @@ class WebResearchAgent:
             try:
                 r=ollama.chat(model,[{"role":"system","content":"You are JARVIS WebResearchAgent. Be precise about dates, prices, entities and uncertainty."},{"role":"user","content":prompt}],False)
                 answer=r.get("message",{}).get("content","").strip() or "No synthesis was returned."
-            except Exception as exc:answer=f"Web sources were retrieved, but local synthesis failed: {exc}"
-        else:answer="\n\n".join(x.split("\nCONTENT:\n",1)[0] for x in context)
+            except Exception as exc:
+                answer=f"Web sources were retrieved, but local synthesis failed: {exc}"
+        else:
+            answer="\n\n".join(x.split("\nCONTENT:\n",1)[0] for x in context)
         result={"text":answer,"query":query,"intent":"web_research","sources":sources,"retrieved_at":time.time(),"latency_ms":round((time.perf_counter()-started)*1000,2),"cache":"live" if live else "miss"}
         if cache and key and not live:cache.set(key,result,ttl=180,source="web-research")
         return result
