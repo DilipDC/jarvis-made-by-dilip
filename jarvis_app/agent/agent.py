@@ -9,10 +9,12 @@ from ..tools.system import open_application,system_info,browser_search
 from ..web.research import WebResearchAgent
 from ..core.identity import answer_identity
 from .fast_intent import classify
+from ..integrations.openinterpreter import OpenInterpreterAdapter
+from ..integrations.loop_guard import LoopGuard
 
 class JarvisAgent:
     def __init__(self,settings,store,cache,ollama,router,pyexec,terminal,rag,web,computer,browser,mcp,voice,vision,perms,scheduler,events,openai_agent=None,agent_manager:AgentManager|None=None):
-        self.s=settings; self.openai_agent=openai_agent; self.store=store; self.cache=cache; self.ollama=ollama; self.router:ModelRouter=router; self.pyexec=pyexec; self.terminal=terminal; self.rag=rag; self.web=web; self.computer=computer; self.browser=browser; self.mcp=mcp; self.voice=voice; self.vision=vision; self.perms=perms; self.scheduler=scheduler; self.events=events; self.tasks=TaskManager(store,events); self.agent_manager=agent_manager; self.pending={}; self.tools=ToolRegistry(); self.researcher=WebResearchAgent(web,settings.web_timeout); self._register_tools()
+        self.s=settings; self.openai_agent=openai_agent; self.openinterpreter=OpenInterpreterAdapter(settings.openinterpreter_enabled,settings.openinterpreter_timeout,settings.openinterpreter_model,settings.openinterpreter_provider); self.loop_guard=LoopGuard(settings.computer_autopilot_steps); self.store=store; self.cache=cache; self.ollama=ollama; self.router:ModelRouter=router; self.pyexec=pyexec; self.terminal=terminal; self.rag=rag; self.web=web; self.computer=computer; self.browser=browser; self.mcp=mcp; self.voice=voice; self.vision=vision; self.perms=perms; self.scheduler=scheduler; self.events=events; self.tasks=TaskManager(store,events); self.agent_manager=agent_manager; self.pending={}; self.tools=ToolRegistry(); self.researcher=WebResearchAgent(web,settings.web_timeout); self._register_tools()
 
     def _register_tools(self):
         self.tools.register(ToolSpec("system_info","CPU, RAM, disk, platform and clock","SAFE",handler=lambda **_:system_info()))
@@ -27,10 +29,11 @@ class JarvisAgent:
         self.tools.register(ToolSpec("search_rag","Search ingested documents","SAFE",handler=lambda query,**_:self.rag.search(query,8)))
         self.tools.register(ToolSpec("browser_title","Open a URL headlessly and read its title","SAFE",handler=lambda url,**_:self.browser.fetch_title(url)))
         self.tools.register(ToolSpec("computer_control","Approved desktop control action","CONFIRM",handler=lambda action,**kwargs:self.computer.act(action,**kwargs)))
+        self.tools.register(ToolSpec("computer_autopilot","Linux computer-use agent via Open Interpreter; uses sandbox and approval controls","CONFIRM",platform="Linux",source="Open Interpreter",handler=None))
 
     def status(self):
         oi=self.ollama.health(); info=system_info()
-        return {"online":True,"model":{"available":oi["available"],"backend":oi.get("backend"),"preferred_backend":oi.get("preferred_backend"),"models":[m.get("name") for m in oi.get("models",[])],"general":self.s.general_model,"coding":self.s.coding_model,"airllm":oi.get("airllm",{}),"ollama":oi.get("ollama",{})},"memory":{"available":True},"rag":{"available":True},"mcp":self.mcp.health(),"web":{"available":True},"system":info,"resources":snapshot(self.s.ram_soft_limit_gb,self.s.ram_critical_limit_gb),"voice":self.voice.health(),"computer":self.computer.health(),"python":{"available":True,"trusted_paths":self.s.trusted_paths},"browser":self.browser.health(),"scheduler":{"available":True,"tasks":len(self.scheduler.list())},"cache":self.cache.stats(),"tasks":self.tasks.list()[:20],"profile":self.s.profile,"policy":{"available":self.perms.policy is not None},"agents":self.agent_manager.snapshot() if self.agent_manager else {"available":False,"count":0},"openai":self.openai_agent.status() if self.openai_agent else {"available":False}}
+        return {"online":True,"integrations":{"openinterpreter":self.openinterpreter.health(),"computer_autopilot":{"enabled":True,"max_steps":self.loop_guard.max_steps,"design":"observe-act-verify"}},"model":{"available":oi["available"],"backend":oi.get("backend"),"preferred_backend":oi.get("preferred_backend"),"models":[m.get("name") for m in oi.get("models",[])],"general":self.s.general_model,"coding":self.s.coding_model,"airllm":oi.get("airllm",{}),"ollama":oi.get("ollama",{})},"memory":{"available":True},"rag":{"available":True},"mcp":self.mcp.health(),"web":{"available":True},"system":info,"resources":snapshot(self.s.ram_soft_limit_gb,self.s.ram_critical_limit_gb),"voice":self.voice.health(),"computer":self.computer.health(),"python":{"available":True,"trusted_paths":self.s.trusted_paths},"browser":self.browser.health(),"scheduler":{"available":True,"tasks":len(self.scheduler.list())},"cache":self.cache.stats(),"tasks":self.tasks.list()[:20],"profile":self.s.profile,"policy":{"available":self.perms.policy is not None},"agents":self.agent_manager.snapshot() if self.agent_manager else {"available":False,"count":0},"openai":self.openai_agent.status() if self.openai_agent else {"available":False}}
 
     def _emit(self,event,**payload):return self.events.emit(event,**payload)
 
@@ -87,6 +90,24 @@ class JarvisAgent:
             if not q:return {"text":"What should I search for?","intent":"browser_search"}
             r=browser_search(q);return {"text":f"Opened the browser and searched for: {q}","intent":"browser_search","result":r}
 
+        if intent=="computer_autopilot":
+            if not self.openinterpreter.available:
+                return {"text":"Linux computer autopilot is not installed. Run scripts/install_openinterpreter_linux.sh first.","intent":intent,"integration":"Open Interpreter","available":False}
+            d=self.perms.check("terminal","Open Interpreter computer autopilot")
+            if d.level!="SAFE":
+                cid=self._confirmation("computer autopilot",text,d.reason,lambda:self.openinterpreter.run(text,cwd=None,write=True))
+                self.tasks.update(task_id,"WAITING_CONFIRMATION",detail="Waiting for computer autopilot approval")
+                return {"text":"Confirmation required before starting the computer autopilot.","intent":intent,"confirmation_id":cid}
+            self.loop_guard.reset()
+            allowed,reason=self.loop_guard.allow("computer_autopilot",{"text":text})
+            if not allowed:return {"text":f"Computer autopilot stopped: {reason}.","intent":intent}
+            self._emit("computer.workflow",state="AUTOPILOT_STARTING",request=text)
+            result=self.openinterpreter.run(
+                "Operate the Linux desktop to complete this request. Use only necessary actions. Verify the result before finishing. Do not perform destructive or irreversible actions: "+text,
+                cwd=None,write=True
+            )
+            self._emit("computer.workflow",state="AUTOPILOT_DONE",ok=result.get("ok"),returncode=result.get("returncode"))
+            return {"text":result.get("stdout") or result.get("stderr") or "Computer autopilot finished.","intent":intent,"integration":"Open Interpreter","result":result,"loop_guard":self.loop_guard.snapshot()}
         if intent=="computer_workflow":
             m=re.search(r"(?:open|launch)\\s+(?:the\\s+)?(editor|vscode|vs code|notepad|gedit).*?(?:type|write|add|paste)\\s+(.+)$",text,re.I|re.S)
             if not m:
@@ -240,7 +261,7 @@ class JarvisAgent:
 
     def stream_chat(self,text):
         intent=classify(text)
-        if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search","computer","computer_workflow","terminal"}:yield {"type":"final","data":self.chat(text)};return
+        if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search","computer","computer_workflow","computer_autopilot","terminal"}:yield {"type":"final","data":self.chat(text)};return
         model=self.router.route(text);messages=[{"role":"system","content":"You are JARVIS, a precise local-first assistant. Never claim actions you did not perform."},{"role":"user","content":text}];self._emit("agent.state",state="SPEAKING",model=model)
         try:
             full=""
