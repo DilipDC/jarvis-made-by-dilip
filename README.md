@@ -1,58 +1,41 @@
 # JARVIS — BUILT BY DILIP
 
-> A lightweight, local-first, multi-agent AI assistant built for real computers, including low-RAM machines.
+> Lightweight, local-first, multi-agent AI assistant for real computers and low-RAM systems.
 
-## Core capabilities
+## What is working
 
-- Local AI with AirLLM-first and Ollama fallback.
-- Multi-agent routing for web research, news, fact checking, GitHub, documents, coding, Python, memory, system tasks and browser workflows.
-- Persistent SQLite memory and explicit reminders.
-- Real browser search: **"open browser and search for laptop"** launches the installed browser with a URL-encoded search query.
-- Current-information research: questions such as **"What is Jio's stock price now?"** are routed to web research and returned with retrieved sources rather than stale local memory.
-- Live scheduler events with browser notification, sound and speech when a reminder becomes due.
-- Low-RAM architecture with bounded context, cache and lazy optional components.
-- Approved desktop control and confirmation gates for OS actions.
-- Optional MCP integrations and RAG.
+- **Local AI:** AirLLM-first with Ollama fallback.
+- **Multi-agent routing:** WebResearch, News, FactCheck, GitHub, Document/RAG, Coding, Python, Memory, Browser and System agents.
+- **Persistent memory:** SQLite-backed explicit memories.
+- **Reminders:** natural phrases such as `Remind me at 8 PM to write homework`, `remember this: write homework at 8 PM`, and `remind me in 30 minutes` create persistent scheduler entries. When due, the UI shows a notification, plays a short sound and speaks the reminder.
+- **Browser search:** `Open browser and search for laptop` opens the installed browser with a URL-encoded Google search.
+- **Current web research:** current/news/price questions use web retrieval and source citations instead of pretending the local model knows live values.
+- **MCP:** official Python SDK ClientSession/stdio transport is used; filesystem and memory servers are lazy-loaded and permission-aware.
+- **Low RAM:** bounded context, bounded cache, lazy loading and idle cleanup.
+- **Desktop helpers:** `happy.py` and an authorized, bounded Nmap diagnostic helper.
 
-## Quick start — Linux/Kali
+## Kali/Linux setup
 
 ```bash
-python -m venv .venv
+cd /home/student/Desktop/jarvis-made-by-dilip
 source .venv/bin/activate
+git pull
 python -m pip install -e .
 python launcher.py
 ```
 
-Optional desktop controller:
+Optional features:
 
 ```bash
 python -m pip install -e ".[computer]"
-```
-
-MCP:
-
-```bash
 python -m pip install -e ".[mcp]"
 ```
 
-MCP configuration is in `config/mcp.json`. Filesystem MCP is CONFIRM-protected; memory MCP is SAFE. MCP servers are lazy-loaded and do not silently receive unrestricted OS access.
+For MCP servers, Node.js/npm/npx must also be available because the configured servers use stdio launchers.
 
-## Useful commands
+## Desktop helper files
 
-```text
-Open browser and search for laptop
-Search the web for the current Jio stock price
-What is the latest AI news?
-Remember that I need to finish homework
-Remind me at 8 PM to write homework
-Remind me in 30 minutes to check my project
-Run scripts/happy.py
-Run scripts/nmap_scan.py 192.168.1.0/24
-```
-
-The Nmap helper is deliberately bounded to `-sV --top-ports 100`. Use it only on systems/networks you own or are authorized to test.
-
-## Create the helper files on your Desktop
+Create them on your Desktop:
 
 ```bash
 python scripts/create_desktop_tools.py
@@ -61,39 +44,58 @@ python scripts/create_desktop_tools.py
 This creates:
 
 ```text
-Desktop/
-├── happy.py
-└── nmap_scan.py
+~/Desktop/happy.py
+~/Desktop/nmap_scan.py
 ```
+
+Run the smoke test:
+
+```bash
+python ~/Desktop/happy.py
+```
+
+Run the Nmap diagnostic against an authorized target:
+
+```bash
+python ~/Desktop/nmap_scan.py 192.168.1.0/24
+```
+
+The Nmap helper uses only `nmap -sV --top-ports 100 TARGET`.
+
+## Example commands
+
+```text
+Who are you?
+Open browser and search for laptop
+Search the web for the current Jio stock price
+What is the latest AI news?
+Remember this: write homework at 8 PM
+Remind me at 8 PM to write homework
+Remind me in 30 minutes to check my project
+Run scripts/happy.py
+Run scripts/nmap_scan.py 192.168.1.0/24
+```
+
+## Accuracy
+
+JARVIS only reports a completed action when the corresponding subsystem returns success. Current web answers include retrieved sources and should report uncertainty when sources disagree or cannot be read. Browser launch and desktop actions return verification data rather than unconditional success claims.
+
+## Safety
+
+Terminal, Python execution and desktop-control actions remain behind the existing permission/confirmation architecture. Nmap is provided as a bounded diagnostic wrapper and should only be used on networks you own or are explicitly authorized to test.
 
 ## Architecture
 
 ```text
 User
  ↓
-Intent router
+Intent Router
  ↓
-Specialist agent
+Specialist Agent
  ↓
-Verified tool/result
- ├─ WebResearchAgent → search → fetch → synthesize → citations
- ├─ NewsAgent → recent multi-source research
- ├─ FactCheckAgent → independent-source comparison
- ├─ GitHubAgent → GitHub research
- ├─ Document/RAGAgent → local documents
- ├─ CodingAgent → coding model
- ├─ PythonAgent → trusted scripts
- ├─ BrowserAgent → browser workflows
- ├─ MemoryAgent → persistent memory
- └─ SystemAgent → approved OS operations
+Tool
+ ↓
+Verified Result
 ```
 
-The UI receives scheduler and agent events over WebSocket so reminders are visible immediately instead of only being stored as backend events.
-
-## Accuracy model
-
-JARVIS does not claim that a browser was opened, a script executed, or a reminder fired unless the corresponding subsystem reports success. Current web facts are sourced from retrieved public pages; if sources disagree or cannot be retrieved, JARVIS reports the uncertainty instead of inventing a value.
-
-## Project
-
-Created by **DILIPDC**. Built to be modified, tested and run locally.
+The web UI receives live scheduler and agent events over WebSocket.
