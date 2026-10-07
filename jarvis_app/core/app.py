@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from .config import DATA_DIR,Settings
 from .resources import snapshot
+from .identity import IDENTITY
 from ..agent.agent import JarvisAgent
 from ..agents.builtins import build_agent_manager
 from ..browser.manager import BrowserManager
@@ -29,7 +30,10 @@ from ..vision.manager import VisionManager
 from ..voice.manager import VoiceManager
 from ..web.search import WebSearch
 settings=Settings.load(); DATA_DIR.mkdir(exist_ok=True); events=EventBus()
-store=MemoryStore(DATA_DIR/"jarvis.sqlite3"); cache=CacheManager(settings.cache_max_entries,settings.cache_max_bytes,settings.persistent_cache_max_bytes,DATA_DIR/"cache")
+store=MemoryStore(DATA_DIR/"jarvis.sqlite3")
+if not store.search("JARVIS identity",1):
+    store.remember("JARVIS identity: "+json.dumps(IDENTITY,ensure_ascii=False),kind="jarvis_identity",importance=5,tags=["identity","creator","capabilities"])
+cache=CacheManager(settings.cache_max_entries,settings.cache_max_bytes,settings.persistent_cache_max_bytes,DATA_DIR/"cache")
 airllm=AirLLMClient(DATA_DIR/"models",settings.max_context_tokens,settings.max_new_tokens,settings.airllm_unload_idle_seconds)
 ollama=OllamaClient(settings.ollama_url,settings.model_backend,airllm,settings.ollama_general_model,settings.ollama_coding_model)
 router=ModelRouter(settings.general_model,settings.coding_model); pyexec=PythonExecutionManager(settings.trusted_paths,settings.python_timeout,store); terminal=TerminalManager(settings.terminal_timeout)
