@@ -7,6 +7,7 @@ from ..tasks.manager import TaskManager
 from ..tools.base import ToolRegistry,ToolSpec
 from ..tools.system import open_application,system_info
 from ..web.research import WebResearchAgent
+from ..core.identity import answer_identity
 from .fast_intent import classify
 class JarvisAgent:
     def __init__(self,settings,store,cache,ollama,router,pyexec,terminal,rag,web,computer,browser,mcp,voice,vision,perms,scheduler,events,openai_agent=None,agent_manager:AgentManager|None=None):
@@ -22,6 +23,7 @@ class JarvisAgent:
         self.tools.register(ToolSpec("read_memory","Retrieve persistent memory","SAFE",handler=lambda query,**_:self.store.search(query,10)))
         self.tools.register(ToolSpec("search_rag","Search ingested documents","SAFE",handler=lambda query,**_:self.rag.search(query,8)))
         self.tools.register(ToolSpec("browser_title","Open a URL headlessly and read its title","SAFE",handler=lambda url,**_:self.browser.fetch_title(url)))
+        self.tools.register(ToolSpec("computer_control","Approved desktop control action","CONFIRM",handler=lambda action,**kwargs:self.computer.act(action,**kwargs)))
     def status(self):
         oi=self.ollama.health(); info=system_info()
         return {"online":True,"model":{"available":oi["available"],"backend":oi.get("backend"),"preferred_backend":oi.get("preferred_backend"),"models":[m.get("name") for m in oi.get("models",[])],"general":self.s.general_model,"coding":self.s.coding_model,"airllm":oi.get("airllm",{}),"ollama":oi.get("ollama",{})},"memory":{"available":True},"rag":{"available":True},"mcp":self.mcp.health(),"web":{"available":True},"system":info,"resources":snapshot(self.s.ram_soft_limit_gb,self.s.ram_critical_limit_gb),"voice":self.voice.health(),"computer":self.computer.health(),"python":{"available":True,"trusted_paths":self.s.trusted_paths},"browser":self.browser.health(),"scheduler":{"available":True,"tasks":len(self.scheduler.list())},"cache":self.cache.stats(),"tasks":self.tasks.list()[:20],"profile":self.s.profile,"policy":{"available":self.perms.policy is not None},"agents":self.agent_manager.snapshot() if self.agent_manager else {"available":False,"count":0},"openai":self.openai_agent.status() if self.openai_agent else {"available":False}}
@@ -43,6 +45,33 @@ class JarvisAgent:
         except Exception as exc:
             self.tasks.update(task.task_id,"FAILED",detail="Unhandled agent error",error=str(exc)); self._emit("agent.error",error=str(exc),task_id=task.task_id); return {"text":f"JARVIS error: {exc}","intent":intent,"agent":selected,"task_id":task.task_id,"error":str(exc)}
     def _dispatch(self,text,intent,task_id):
+        identity=answer_identity(text)
+        if identity:
+            self.store.remember("JARVIS identity: "+identity,kind="jarvis_identity",importance=5)
+            return {"text":identity,"intent":"identity","source":"permanent identity profile"}
+        if intent=="computer":
+            m=re.search(r"click\s+(\d+)\s+(\d+)",text,re.I)
+            if m: action,args="click",{"x":int(m.group(1)),"y":int(m.group(2))}
+            else:
+                m=re.search(r"double\s*click\s+(\d+)\s+(\d+)",text,re.I)
+                if m: action,args="double_click",{"x":int(m.group(1)),"y":int(m.group(2))}
+                else:
+                    m=re.search(r"type\s+(.+)$",text,re.I)
+                    if m: action,args="type",{"text":m.group(1)}
+                    else:
+                        m=re.search(r"press\s+([\w]+)",text,re.I)
+                        if m: action,args="press",{"key":m.group(1)}
+                        else:
+                            m=re.search(r"hotkey\s+([\w+ -]+)",text,re.I)
+                            if m: action,args="hotkey",{"keys":m.group(1).replace(" ","")}
+                            elif re.search(r"screenshot",text,re.I): action,args="screenshot",{}
+                            else: return {"text":"Tell me a desktop action such as click 500 300, type text, press enter, hotkey ctrl+alt+t, or screenshot.","intent":"computer"}
+            d=self.perms.check("terminal",f"desktop:{action}")
+            if d.level!="SAFE":
+                cid=self._confirmation("desktop control",action,d.reason,lambda:self.computer.act(action,**args))
+                self.tasks.update(task_id,"WAITING_CONFIRMATION",detail="Waiting for desktop control approval")
+                return {"text":f"Confirmation required before desktop action: {action}.","intent":"computer","confirmation_id":cid}
+            return {"text":f"Desktop action completed: {action}.","intent":"computer","result":self.computer.act(action,**args)}
         if intent in {"ram","cpu"}:
             self.tasks.update(task_id,"EXECUTING",detail="Reading OS metrics"); info=system_info(); return {"text":f"CPU {info.get('cpu_percent','n/a')}% | RAM {info.get('ram_percent','n/a')}%" if intent=="ram" else f"CPU {info.get('cpu_percent','n/a')}% | {info.get('cpu_count','n/a')} logical CPUs","intent":intent,"source":"OS API","data":info}
         if intent=="time":return {"text":system_info()["time"],"intent":intent,"source":"system clock"}
