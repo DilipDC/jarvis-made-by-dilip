@@ -6,14 +6,16 @@ from ..models.router import ModelRouter
 from ..tasks.manager import TaskManager
 from ..tools.base import ToolRegistry,ToolSpec
 from ..tools.system import open_application,system_info
+from ..web.research import WebResearchAgent
 from .fast_intent import classify
 class JarvisAgent:
     def __init__(self,settings,store,cache,ollama,router,pyexec,terminal,rag,web,computer,browser,mcp,voice,vision,perms,scheduler,events,openai_agent=None,agent_manager:AgentManager|None=None):
-        self.s=settings; self.openai_agent=openai_agent; self.store=store; self.cache=cache; self.ollama=ollama; self.router:ModelRouter=router; self.pyexec=pyexec; self.terminal=terminal; self.rag=rag; self.web=web; self.computer=computer; self.browser=browser; self.mcp=mcp; self.voice=voice; self.vision=vision; self.perms=perms; self.scheduler=scheduler; self.events=events; self.tasks=TaskManager(store,events); self.agent_manager=agent_manager; self.pending={}; self.tools=ToolRegistry(); self._register_tools()
+        self.s=settings; self.openai_agent=openai_agent; self.store=store; self.cache=cache; self.ollama=ollama; self.router:ModelRouter=router; self.pyexec=pyexec; self.terminal=terminal; self.rag=rag; self.web=web; self.computer=computer; self.browser=browser; self.mcp=mcp; self.voice=voice; self.vision=vision; self.perms=perms; self.scheduler=scheduler; self.events=events; self.tasks=TaskManager(store,events); self.agent_manager=agent_manager; self.pending={}; self.tools=ToolRegistry(); self.researcher=WebResearchAgent(web,settings.web_timeout); self._register_tools()
     def _register_tools(self):
         self.tools.register(ToolSpec("system_info","CPU, RAM, disk, platform and clock","SAFE",handler=lambda **_:system_info()))
         self.tools.register(ToolSpec("remember","Persist an explicit user memory","SAFE",handler=lambda content,**_:self.store.remember(content,kind="user_requested",importance=3)))
         self.tools.register(ToolSpec("web_search","Search current web information","SAFE",handler=lambda query,**_:self.web.search(query)))
+        self.tools.register(ToolSpec("web_research","Search, read, synthesize and cite public web sources","SAFE",handler=lambda query,**_:self.researcher.research(query,self.ollama,self.router.route(query),self.cache)))
         self.tools.register(ToolSpec("open_application","Launch an application","SAFE",handler=lambda name,**_:open_application(name)))
         self.tools.register(ToolSpec("execute_python","Run an existing trusted Python file","CONFIRM",handler=None))
         self.tools.register(ToolSpec("run_terminal","Run an OS command","CONFIRM",handler=None))
@@ -64,7 +66,9 @@ class JarvisAgent:
                 cid=self._confirmation("run terminal",cmd,d.reason,lambda:self.terminal.run_line(cmd)); return {"text":"Confirmation required before running a terminal command.","intent":intent,"permission":d.level,"confirmation_id":cid}
             r=self.terminal.run_line(cmd); return {"text":r.stdout or r.stderr,"intent":intent,"source":"terminal","returncode":r.returncode,"stderr":r.stderr}
         if intent=="web":
-            self.tasks.update(task_id,"EXECUTING",detail="Searching live web"); r=self.web.search(text); return {"text":"\n".join(f"{x['title']} — {x['url']}" for x in r["results"]) or "No web results found.","intent":intent,"source":"live web","results":r["results"]}
+            self.tasks.update(task_id,"EXECUTING",detail="Researching multiple public sources")
+            r=self.researcher.research(text,self.ollama,self.router.route(text),self.cache)
+            return {"text":r["text"],"intent":"web_research","source":"web research","sources":r["sources"],"research_latency_ms":r["latency_ms"],"cache":r["cache"]}
         if re.search(r"\b(project|documentation|docs|memory|what did i|remembered)\b",text,re.I):
             hits=self.rag.search(text,5) or self.store.search(text,5)
             if hits:return {"text":"Relevant local knowledge:\n"+"\n".join((h.get("content") or h.get("title") or "")[:700] for h in hits),"intent":"rag","source":"local knowledge","hits":hits}
