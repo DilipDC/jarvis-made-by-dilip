@@ -9,6 +9,8 @@ def main():
     check("OS", platform.system() in {"Windows","Linux"}, platform.platform())
     check("FastAPI", importlib.util.find_spec("fastapi") is not None)
     check("PyAutoGUI", importlib.util.find_spec("pyautogui") is not None, "desktop control")
+    check("mss", importlib.util.find_spec("mss") is not None, "screen capture fallback")
+    check("xdotool", shutil.which("xdotool") is not None, "Linux input fallback")
     check("Playwright", importlib.util.find_spec("playwright") is not None, "headless browser")
     check("MCP", importlib.util.find_spec("mcp") is not None, "MCP SDK")
     check("AirLLM", importlib.util.find_spec("airllm") is not None, "local inference")
