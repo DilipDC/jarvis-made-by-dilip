@@ -13,6 +13,8 @@ actions:
     mode: confirm
   browser:
     mode: allow
+  screenshot:
+    mode: allow
   terminal:
     mode: confirm
   system_info:
