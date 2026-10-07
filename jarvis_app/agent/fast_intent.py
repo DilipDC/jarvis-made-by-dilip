@@ -9,6 +9,7 @@ RULES=[
     ("cpu", re.compile(r"\b(cpu|processor usage|cpu usage)\b",re.I)),
     ("time", re.compile(r"\b(what time|current time|time now)\b",re.I)),
     ("remember", re.compile(r"^\s*remember\b",re.I)),
+    ("memory_query", re.compile(r"^\s*(?:what do you remember|what have you remembered|what did i ask you to remember|show my memories)\b",re.I)),
     ("forget", re.compile(r"^\s*forget\b",re.I)),
     ("python", re.compile(r"\b(execute|run|start)\s+[\w./\\-]+\.py\b",re.I)),
     ("computer", re.compile(r"\b(click|double click|type|press|hotkey|move mouse|screenshot|control (my|the) (computer|desktop)|control windows|control linux)\b",re.I)),
