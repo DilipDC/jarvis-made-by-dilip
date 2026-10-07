@@ -1,9 +1,21 @@
 from __future__ import annotations
-import csv, hashlib, json, re, zipfile, time
+import csv, hashlib, json, re, zipfile, time, os
 from pathlib import Path
 from xml.etree import ElementTree as ET
 class RAGManager:
-    def __init__(self,store): self.store=store
+    def __init__(self,store):
+        self.store=store
+        self.semantic_enabled=os.getenv("JARVIS_SEMANTIC_RAG","0").lower() in {"1","true","yes","on"}
+        self._embedder=None
+    def _semantic(self):
+        if not self.semantic_enabled:return None
+        if self._embedder is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._embedder=SentenceTransformer("all-MiniLM-L6-v2")
+            except Exception:
+                self.semantic_enabled=False
+        return self._embedder
     def _extract(self,path:Path):
         if path.suffix.lower()=='.pdf':
             from pypdf import PdfReader; return '\n'.join((p.extract_text() or '') for p in PdfReader(str(path)).pages)
@@ -29,6 +41,21 @@ class RAGManager:
     def search(self,q,limit=8):
         tokens=[re.sub(r'[^A-Za-z0-9_]', '',x) for x in q.split()]; query=' OR '.join(x for x in tokens if x)
         if not query: return []
+        candidate_limit=max(limit*4,32) if self.semantic_enabled else limit
         with self.store.connect() as c:
-            rows=c.execute('SELECT chunk_id,content FROM document_fts WHERE document_fts MATCH ? LIMIT ?',(query,limit)).fetchall()
-        return [dict(r) for r in rows]
+            rows=c.execute('SELECT chunk_id,content FROM document_fts WHERE document_fts MATCH ? LIMIT ?',(query,candidate_limit)).fetchall()
+        results=[dict(r) for r in rows]
+        model=self._semantic()
+        if model and results:
+            try:
+                vectors=model.encode([q]+[x["content"] for x in results],normalize_embeddings=True)
+                qv=vectors[0]
+                scored=[]
+                for item,v in zip(results,vectors[1:]):
+                    score=sum(float(a)*float(b) for a,b in zip(qv,v))
+                    scored.append((score,item))
+                scored.sort(key=lambda x:x[0],reverse=True)
+                return [item for _,item in scored[:limit]]
+            except Exception:
+                pass
+        return results[:limit]
