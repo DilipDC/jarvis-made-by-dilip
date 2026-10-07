@@ -43,6 +43,9 @@ function connectEvents(){
       const x=JSON.parse(e.data);
       if(x.event==='agent.state'){$('#agentState').textContent=(x.agent||x.intent||x.state||'working').toString();state.textContent=x.state||'WORKING'}
       if(x.event==='agent.error'){state.textContent='ERROR';$('#liveText').textContent='Agent error';add('system','Agent error: '+x.error)}
+      if(x.event==='computer.action'){state.textContent=(x.state||'WORKING').toUpperCase();$('#liveText').textContent='Desktop: '+x.action+' · '+x.state}
+      if(x.event==='computer.workflow'){state.textContent=(x.state||'WORKING').toUpperCase();$('#liveText').textContent='Workflow: '+x.state+' '+(x.application||'')}
+      if(x.event==='computer.screenshot'){$('#liveText').textContent='Screenshot: '+x.path}
       if(x.event==='scheduler.add'){const t=x.task||{};$('#liveText').textContent='Reminder scheduled';$('#nextReminder').textContent='Next: '+(t.command||'Reminder')}
       if(x.event==='scheduler.due'){beep();const t=x.task||{};const msg=t.command||'Reminder';add('system','REMINDER: '+msg);$('#liveText').textContent='Reminder due';notify('JARVIS reminder',msg);speak('Reminder: '+msg);refreshReminder()}
     };
