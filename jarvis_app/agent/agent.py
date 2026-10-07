@@ -66,9 +66,18 @@ class JarvisAgent:
                 cid=self._confirmation("run terminal",cmd,d.reason,lambda:self.terminal.run_line(cmd)); return {"text":"Confirmation required before running a terminal command.","intent":intent,"permission":d.level,"confirmation_id":cid}
             r=self.terminal.run_line(cmd); return {"text":r.stdout or r.stderr,"intent":intent,"source":"terminal","returncode":r.returncode,"stderr":r.stderr}
         if intent=="web":
-            self.tasks.update(task_id,"EXECUTING",detail="Researching multiple public sources")
-            r=self.researcher.research(text,self.ollama,self.router.route(text),self.cache)
-            return {"text":r["text"],"intent":"web_research","source":"web research","sources":r["sources"],"research_latency_ms":r["latency_ms"],"cache":r["cache"]}
+            selected=self._selected_agent(intent,text)
+            self.tasks.update(task_id,"EXECUTING",detail=f"Researching for {selected}")
+            query=text
+            if selected=="FactCheckAgent": query="Fact check this claim and compare independent sources: "+text
+            elif selected=="NewsAgent": query="Find the latest reliable news and recent reporting about: "+text
+            elif selected=="GitHubAgent": query="Research GitHub repositories, releases, issues and code references for: "+text
+            r=self.researcher.research(query,self.ollama,self.router.route(text),self.cache)
+            return {"text":r["text"],"intent":"web_research","source":"web research","sources":r["sources"],"research_agent":selected,"research_latency_ms":r["latency_ms"],"cache":r["cache"]}
+        if self._selected_agent(intent,text)=="DocumentAgent":
+            hits=self.rag.search(text,8) or self.store.search(text,8)
+            if hits:
+                return {"text":"DocumentAgent found relevant local content:\n"+"\n".join((h.get("content") or h.get("title") or "")[:900] for h in hits),"intent":"document","source":"local documents","hits":hits}
         if re.search(r"\b(project|documentation|docs|memory|what did i|remembered)\b",text,re.I):
             hits=self.rag.search(text,5) or self.store.search(text,5)
             if hits:return {"text":"Relevant local knowledge:\n"+"\n".join((h.get("content") or h.get("title") or "")[:700] for h in hits),"intent":"rag","source":"local knowledge","hits":hits}
