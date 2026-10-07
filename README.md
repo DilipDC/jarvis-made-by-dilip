@@ -190,6 +190,71 @@ Local AI operating layer
 
 `AI assistant`, `personal AI`, `local AI`, `local LLM`, `offline AI`, `multi-agent AI`, `AI agents`, `Python AI`, `AirLLM`, `Qwen`, `Qwen3`, `Qwen2.5-Coder`, `low RAM AI`, `4GB RAM AI`, `lightweight AI`, `RAG`, `web research`, `AI web search`, `fact checking AI`, `GitHub agent`, `coding agent`, `browser agent`, `Python agent`, `AI automation`, `Jarvis AI`, `Linux AI`, `Ubuntu AI`, `Windows AI`, `open source AI`, `embedded AI`, `robotics AI`
 
+## Voice-first desktop mode
+
+The web UI now follows a simple voice-assistant design: a central animated purple JARVIS orb, microphone button, spoken responses, compact system cards and a mobile-friendly conversation view.
+
+Example voice commands:
+
+    Who created you?
+    What can you do?
+    Search the internet for the latest AI news.
+    Remember that my project deadline is Friday.
+    Open Chrome.
+    Run command terminal: ...
+    Click 500 300.
+    Type hello world.
+    Press enter.
+    Hotkey ctrl+alt+t.
+    Take a screenshot.
+
+Browser speech recognition is used when supported. Browser speech synthesis reads JARVIS responses aloud. Optional Python voice packages remain available for a native voice backend.
+
+## Desktop control
+
+JARVIS supports an **approved-action desktop layer** on Windows and Linux. The desktop controller uses PyAutoGUI when installed and can perform bounded actions such as mouse movement/clicks, typing, key presses, hotkeys and screenshots.
+
+Desktop actions are not treated as unrestricted shell access. The agent routes them through the permission/confirmation layer. Terminal commands remain separately protected.
+
+Install the optional desktop backend:
+
+    python -m pip install -e ".[computer]"
+
+## MCP: two ready integrations
+
+JARVIS now includes two lazy-loaded MCP integrations based on the official MCP server ecosystem:
+
+1. **Filesystem MCP** — file read/write/search operations restricted to the JARVIS working directory and marked CONFIRM.
+2. **Memory MCP** — knowledge-graph memory server, marked SAFE.
+
+MCP servers are **lazy**: JARVIS does not launch them at startup. They start only when inspected or used, which helps the 2–4 GB RAM target.
+
+Install the optional MCP client:
+
+    python -m pip install -e ".[mcp]"
+
+The default configuration is in `config/mcp.json`.
+
+The application exposes:
+
+    GET  /api/mcp
+    POST /api/mcp/filesystem/inspect
+    POST /api/mcp/memory/inspect
+
+MCP uses the standard client/server protocol rather than embedding a separate custom plugin format.
+
+## Permanent JARVIS identity
+
+JARVIS has a persistent identity profile stored in its local SQLite database during startup. It knows its project identity, creator and core capabilities.
+
+Examples:
+
+    Who are you?
+    Who created you?
+    What can you do?
+    About yourself.
+
+Identity information is kept separate from temporary LLM response caching, so it does not expire when the normal cache is cleared.
 ## Support the project
 
 If JARVIS is useful, **star the repository**, fork it, report bugs, propose agents, improve documentation or submit pull requests. Stars are useful because they improve project discovery, but no repository can honestly guarantee a particular star count.
