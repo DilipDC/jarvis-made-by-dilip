@@ -39,7 +39,11 @@ class JarvisAgent:
 
     def _confirmation(self,action,target,reason,callback):
         import uuid
-        cid=str(uuid.uuid4());self.pending[cid]={"id":cid,"action":action,"target":target,"reason":reason,"callback":callback,"created_at":time.time()};self._emit("confirmation.required",confirmation=self.pending[cid].copy());return cid
+        cid=str(uuid.uuid4());
+        self.pending[cid]={"id":cid,"action":action,"target":target,"reason":reason,"callback":callback,"created_at":time.time()};
+        safe_confirmation={k:v for k,v in self.pending[cid].items() if k!="callback"};
+        self._emit("confirmation.required",confirmation=safe_confirmation);
+        return cid
 
     def confirm(self,cid,approved):
         item=self.pending.pop(cid,None)
@@ -161,6 +165,12 @@ class JarvisAgent:
         if intent=="remember":
             content=text.split(None,1)[1] if len(text.split(None,1))>1 else ""
             self.store.remember(content,kind="user_requested",importance=3);return {"text":"Memory stored.","intent":intent,"source":"SQLite"}
+        if intent=="memory_query":
+            hits=self.store.search("",12)
+            user_hits=[h for h in hits if h.get("kind")!="jarvis_identity"]
+            if not user_hits:return {"text":"I do not have any explicit user memories yet.","intent":intent,"source":"SQLite","memories":[]}
+            lines=["- "+str(h.get("content","")).strip() for h in user_hits if h.get("content")]
+            return {"text":"Here is what I remember:\n"+"\n".join(lines),"intent":intent,"source":"SQLite","memories":user_hits}
         if intent=="forget":
             q=text.split(None,1)[1] if len(text.split(None,1))>1 else "";return {"text":f"Removed {self.store.forget(q)} matching memory record(s).","intent":intent,"source":"SQLite"}
         if intent=="python":
@@ -169,7 +179,11 @@ class JarvisAgent:
                 cid=self._confirmation("execute python",script,d.reason,lambda:self.pyexec.run_script(script,(m.group(2) or "").split() if m else []));self.tasks.update(task_id,"WAITING_CONFIRMATION",detail="Waiting for Python execution approval");return {"text":f"Confirmation required to execute {script}.","intent":intent,"permission":d.level,"confirmation_id":cid}
             r=self.pyexec.run_script(script,(m.group(2) or "").split());return {"text":f"Started {r['script']} as PID {r['pid']}","intent":intent,"source":"PythonExecutionManager","task":r}
         if intent=="open_app":
-            target=text.split(None,1)[1].strip();return {"text":f"Launch requested for {target}.","intent":intent,"verification":open_application(target)}
+            target=text.split(None,1)[1].strip()
+            result=self.computer.act("open_app",name=target)
+            if not result.get("started"):
+                return {"text":"I could not open "+target+": "+result.get("error","unknown error"),"intent":intent,"result":result}
+            return {"text":"Opened "+target+".","intent":intent,"result":result,"verified":True}
         if intent=="list_tasks":
             tasks=self.pyexec.list();return {"text":"\n".join(f"{x['script']} · {x['status']} · PID {x['pid']}" for x in tasks) or "No Python tasks running or recorded.","intent":intent,"tasks":tasks}
         if intent=="terminal":
@@ -261,7 +275,7 @@ class JarvisAgent:
 
     def stream_chat(self,text):
         intent=classify(text)
-        if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search","computer","computer_workflow","computer_autopilot","terminal"}:yield {"type":"final","data":self.chat(text)};return
+        if intent in {"ram","cpu","time","remember","memory_query","forget","status","python","open_app","list_tasks","web","reminder","browser_search","computer","computer_workflow","computer_autopilot","terminal"}:yield {"type":"final","data":self.chat(text)};return
         model=self.router.route(text);messages=[{"role":"system","content":"You are JARVIS, a precise local-first assistant. Never claim actions you did not perform."},{"role":"user","content":text}];self._emit("agent.state",state="SPEAKING",model=model)
         try:
             full=""
