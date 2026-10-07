@@ -107,7 +107,7 @@ def bridge(data):
     for q in list(_clients):
         try:q.put_nowait(data)
         except Exception:pass
-for event_name in ["agent.state","agent.completed","agent.error","task.created","task.updated","confirmation.required","confirmation.approved","confirmation.denied","confirmation.failed","scheduler.add","scheduler.cancel","scheduler.due"]:events.on(event_name,bridge)
+for event_name in ["agent.state","agent.completed","agent.error","task.created","task.updated","confirmation.required","confirmation.approved","confirmation.denied","confirmation.failed","scheduler.add","scheduler.cancel","scheduler.due","computer.action","computer.workflow","computer.screenshot"]:events.on(event_name,bridge)
 @app.websocket("/api/events")
 async def ws(websocket:WebSocket):
     await websocket.accept(); q=asyncio.Queue(); _clients.add(q)
