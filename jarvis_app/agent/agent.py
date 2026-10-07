@@ -179,6 +179,30 @@ class JarvisAgent:
         if snapshot(self.s.ram_soft_limit_gb,self.s.ram_critical_limit_gb).get("mode")=="CRITICAL":self.cache.clear_temp();self.ollama.unload_inactive();low_ram_cleanup()
         return {"text":answer,"intent":intent,"model":model,"backend":r.get("_backend",self.ollama.backend),"latency_ms":r.get("_latency_ms"),"cache":"miss"}
 
+    def chat(self, text: str):
+        """Process one user message through the fast intent/agent dispatcher."""
+        text = (text or "").strip()
+        if not text:
+            return {"text": "Tell me what you want me to do.", "intent": "chat"}
+        task = self.tasks.create(text) if hasattr(self.tasks, "create") else None
+        task_id = task.get("id") if isinstance(task, dict) else None
+        intent = classify(text)
+        self._emit("agent.state", state="THINKING", intent=intent)
+        try:
+            result = self._dispatch(text, intent, task_id)
+            if task_id:
+                self.tasks.update(task_id, "COMPLETED", detail="Request completed")
+            self._emit("agent.completed", intent=intent, result=result)
+            return result
+        except Exception as exc:
+            if task_id:
+                try:
+                    self.tasks.update(task_id, "FAILED", detail=str(exc))
+                except Exception:
+                    pass
+            self._emit("agent.error", intent=intent, error=str(exc))
+            return {"text": f"JARVIS encountered an error: {exc}", "intent": intent, "error": str(exc)}
+
     def stream_chat(self,text):
         intent=classify(text)
         if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search"}:yield {"type":"final","data":self.chat(text)};return
