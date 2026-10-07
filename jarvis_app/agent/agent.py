@@ -127,7 +127,8 @@ class JarvisAgent:
                             if m:action,args="hotkey",{"keys":m.group(1).replace(" ","")}
                             elif re.search(r'screenshot',text,re.I):action,args="screenshot",{}
                             else:return {"text":"Tell me a desktop action such as click 500 300, type text, press enter, hotkey ctrl+alt+t, or screenshot.","intent":"computer"}
-            d=self.perms.check("terminal",f"desktop:{action}")
+            permission_action = "screenshot" if action == "screenshot" else "browser" if action == "open_app" else "terminal"
+            d=self.perms.check(permission_action,f"desktop:{action}")
             if d.level!="SAFE":
                 cid=self._confirmation("desktop control",action,d.reason,lambda:self.computer.act(action,**args));self.tasks.update(task_id,"WAITING_CONFIRMATION",detail="Waiting for desktop control approval");return {"text":f"Confirmation required before desktop action: {action}.","intent":"computer","confirmation_id":cid}
             return {"text":f"Desktop action completed: {action}.","intent":"computer","result":self.computer.act(action,**args)}
