@@ -203,9 +203,43 @@ class JarvisAgent:
             self._emit("agent.error", intent=intent, error=str(exc))
             return {"text": f"JARVIS encountered an error: {exc}", "intent": intent, "error": str(exc)}
 
+    def chat(self, text):
+        """Handle one synchronous user request with task lifecycle tracking."""
+        text = (text or "").strip()
+        if not text:
+            return {"text": "Please tell me what you want me to do.", "intent": "chat"}
+
+        intent = classify(text)
+        task = self.tasks.create(text[:160])
+        task_id = task.task_id
+        self.tasks.update(task_id, "PLANNING", detail=f"Classified as {intent}")
+        self._emit("agent.state", state="THINKING", intent=intent, task_id=task_id)
+
+        try:
+            result = self._dispatch(text, intent, task_id)
+            if result.get("confirmation_id"):
+                return {**result, "task_id": task_id}
+
+            self.tasks.update(task_id, "VERIFYING", progress=0.9, detail="Verifying result")
+            if not isinstance(result, dict):
+                result = {"text": str(result), "intent": intent}
+            result.setdefault("task_id", task_id)
+            self.tasks.update(task_id, "COMPLETED", progress=1.0, detail="Completed")
+            self._emit("agent.state", state="IDLE", intent=intent, task_id=task_id)
+            return result
+        except Exception as exc:
+            self.tasks.update(task_id, "FAILED", error=str(exc), detail="Request failed")
+            self._emit("agent.state", state="ERROR", intent=intent, task_id=task_id, error=str(exc))
+            return {
+                "text": f"I could not complete that request: {exc}",
+                "intent": intent,
+                "task_id": task_id,
+                "error": str(exc),
+            }
+
     def stream_chat(self,text):
         intent=classify(text)
-        if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search"}:yield {"type":"final","data":self.chat(text)};return
+        if intent in {"ram","cpu","time","remember","forget","status","python","open_app","list_tasks","web","reminder","browser_search","computer","computer_workflow","terminal"}:yield {"type":"final","data":self.chat(text)};return
         model=self.router.route(text);messages=[{"role":"system","content":"You are JARVIS, a precise local-first assistant. Never claim actions you did not perform."},{"role":"user","content":text}];self._emit("agent.state",state="SPEAKING",model=model)
         try:
             full=""
