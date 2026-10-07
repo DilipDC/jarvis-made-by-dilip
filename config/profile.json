@@ -1,0 +1,8 @@
+{
+  "name": "Dilip",
+  "assistant_name": "JARVIS",
+  "welcome_enabled": true,
+  "welcome_style": "brief",
+  "interests": [],
+  "preferred_language": "English"
+}

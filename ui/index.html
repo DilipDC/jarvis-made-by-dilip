@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#040712"><title>JARVIS — BUILT BY DILIP</title><link rel="stylesheet" href="/ui/style.css"></head>
+<body>
+<div class="scanline"></div>
+<main class="shell">
+<header class="topbar"><div><div class="eyebrow">JARVIS // LOCAL-FIRST AI OPERATING LAYER</div><h1>BUILT BY DILIP</h1></div><div class="top-actions"><span id="net" class="pill">CONNECTING</span><button id="paletteBtn">⌘ K</button></div></header>
+<section class="hero">
+<aside class="panel telemetry"><div class="section-title">SYSTEM TELEMETRY</div><div id="status" class="status-grid"></div><div class="metric"><span>ACTIVE MODEL</span><strong id="model">—</strong></div><div class="metric"><span>RAM</span><strong id="ram">—</strong></div><div class="metric"><span>CPU</span><strong id="cpu">—</strong></div></aside>
+<section class="panel core-panel"><div class="core-wrap"><div id="ring2" class="ring ring2"></div><div id="ring3" class="ring ring3"></div><div id="orb" class="orb"><div class="orb-inner"><span class="orb-label">JARVIS</span><span id="state">IDLE</span></div></div></div><div id="taskLine" class="task-line">READY // AWAITING COMMAND</div></section>
+<aside class="panel modules"><div class="section-title">SUBSYSTEMS</div><div id="modules"></div><div class="quick"><button data-cmd="What is my RAM usage?">RAM</button><button data-cmd="Jarvis status">STATUS</button><button data-cmd="What time is it?">TIME</button><button id="micBtn">MIC</button></div></aside>
+</section>
+<section class="workspace"><section class="panel chat-panel"><div class="section-title">COMMAND CONSOLE</div><div id="messages" class="messages"></div><form id="chat"><input id="input" placeholder="Ask JARVIS to think, search, remember, code, or act…" autocomplete="off"><button>EXECUTE</button></form><div class="shortcuts">Ctrl/Cmd+K palette · Ctrl/Cmd+M microphone · Enter execute</div></section><section class="panel tasks-panel"><div class="section-title">LIVE TASKS</div><div id="tasks"></div><div class="section-title lower">AUDIT</div><div id="audit" class="audit">Secure event stream ready.</div></section></section>
+</main>
+<div id="palette" class="overlay hidden"><div class="palette"><input id="paletteInput" placeholder="Command palette…"><div id="paletteResults"></div></div></div>
+<script src="/ui/app.js"></script>
+</body></html>
