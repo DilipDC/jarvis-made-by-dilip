@@ -1,0 +1,23 @@
+version: 1
+defaults:
+  confirmation: confirm
+  logging: enabled
+actions:
+  read_file:
+    mode: allow
+  write_file:
+    mode: confirm
+  delete_file:
+    mode: confirm
+  execute_python:
+    mode: confirm
+  browser:
+    mode: allow
+  terminal:
+    mode: confirm
+  system_info:
+    mode: allow
+  remember:
+    mode: allow
+  forget:
+    mode: confirm
