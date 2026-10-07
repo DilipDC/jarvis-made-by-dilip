@@ -7,6 +7,7 @@ RULES=[
  ('remember', re.compile(r'^\s*remember\b',re.I)),
  ('forget', re.compile(r'^\s*forget\b',re.I)),
  ('python', re.compile(r'\b(execute|run|start)\s+[\w./\\-]+\.py\b',re.I)),
+ ('computer', re.compile(r'\b(click|double click|type|press|hotkey|move mouse|screenshot|control (my|the) (computer|desktop)|control windows|control linux)\b',re.I)),
  ('open_app', re.compile(r'^\s*open\s+.+$',re.I)),
  ('list_tasks', re.compile(r'\b(task status|running tasks|python tasks|list tasks)\b',re.I)),
  ('terminal', re.compile(r'^\s*(run|execute)\s+(command|terminal)\b',re.I)),
