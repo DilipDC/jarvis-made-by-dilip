@@ -31,7 +31,7 @@ class MCPManager:
         if name not in self.servers:raise KeyError(name)
         server=self.servers[name]
         if not server["enabled"]:return {"name":name,"enabled":False,"tools":[]}
-        if not self.sdk_available:return {"name":name,"status":"BLOCKED","reason":"Install optional MCP dependency: python -m pip install -e ".[mcp]""}
+        if not self.sdk_available:return {"name":name,"status":"BLOCKED","reason":"Install optional MCP dependency: python -m pip install -e '.[mcp]'"}
         from mcp import ClientSession
         from mcp.client.stdio import stdio_client
         try:
