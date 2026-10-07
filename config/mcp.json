@@ -1,0 +1,20 @@
+{
+  "servers": {
+    "filesystem": {
+      "enabled": true,
+      "trust": "CONFIRM",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Official MCP filesystem server restricted to the JARVIS working directory."
+    },
+    "memory": {
+      "enabled": true,
+      "trust": "SAFE",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "Official MCP knowledge-graph memory server."
+    }
+  }
+}
