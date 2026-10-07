@@ -37,11 +37,12 @@ openai_agent=OpenAIAgentsAdapter(settings.openai_model); rag=RAGManager(store); 
 policy=load_policy(Path(__file__).resolve().parents[2]); perms=PermissionManager(policy)
 agent_manager=build_agent_manager(settings.general_model,settings.coding_model,settings.max_subagents,settings.max_parallel_agents,settings.max_agent_depth)
 agent=JarvisAgent(settings,store,cache,ollama,router,pyexec,terminal,rag,web,computer,browser,mcp,voice,vision,perms,scheduler,events,openai_agent,agent_manager=agent_manager)
-app=FastAPI(title="JARVIS — BUILT BY DILIP",version="0.3.0"); ROOT=Path(__file__).resolve().parents[2]; app.mount("/ui",StaticFiles(directory=str(ROOT/"ui")),name="ui")
+app=FastAPI(title="JARVIS — BUILT BY DILIP",version="1.0.1"); ROOT=Path(__file__).resolve().parents[2]; app.mount("/ui",StaticFiles(directory=str(ROOT/"ui")),name="ui")
 class Chat(BaseModel):text:str
 class MemoryIn(BaseModel):text:str
 class Confirmation(BaseModel):approved:bool
 class ScheduleIn(BaseModel):delay_seconds:int; command:str
+class ComputerAction(BaseModel):action:str; x:int|None=None; y:int|None=None; text:str|None=None; key:str|None=None; keys:str|None=None; path:str|None=None
 @app.get("/",response_class=HTMLResponse)
 def index():return (ROOT/"ui"/"index.html").read_text(encoding="utf-8")
 @app.get("/api/status")
@@ -67,8 +68,14 @@ def stop_task(task_id:str):return pyexec.stop(task_id)
 def memory(q:str=""):return store.search(q,20)
 @app.post("/api/memory")
 def remember(body:MemoryIn):return {"id":store.remember(body.text,kind="user_requested",importance=3)}
+@app.get("/api/identity")
+def identity():return __import__("jarvis_app.core.identity",fromlist=["describe_identity"]).describe_identity()
 @app.get("/api/tools")
 def tools():return agent.tools.describe()
+@app.get("/api/mcp")
+def mcp_status():return mcp.health()
+@app.post("/api/mcp/{name}/inspect")
+async def mcp_inspect(name:str):return await mcp.inspect(name)
 @app.get("/api/cache")
 def cache_stats():return cache.stats()
 @app.post("/api/cache/temp/clear")
@@ -85,6 +92,8 @@ def add_schedule(body:ScheduleIn):return scheduler.add(body.delay_seconds,body.c
 def cancel_schedule(tid:str):return {"cancelled":scheduler.cancel(tid)}
 @app.post("/api/terminal")
 def terminal_endpoint(body:Chat):return agent.chat("run command "+body.text)
+@app.post("/api/computer")
+def computer_endpoint(body:ComputerAction):return computer.act(body.action,x=body.x,y=body.y,text=body.text,key=body.key,keys=body.keys,path=body.path)
 @app.post("/api/rag/ingest")
 def ingest(path:str):return rag.ingest(path)
 @app.get("/api/rag/search")
