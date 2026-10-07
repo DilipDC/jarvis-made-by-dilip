@@ -37,7 +37,7 @@ cache=CacheManager(settings.cache_max_entries,settings.cache_max_bytes,settings.
 airllm=AirLLMClient(DATA_DIR/"models",settings.max_context_tokens,settings.max_new_tokens,settings.airllm_unload_idle_seconds)
 ollama=OllamaClient(settings.ollama_url,settings.model_backend,airllm,settings.ollama_general_model,settings.ollama_coding_model)
 router=ModelRouter(settings.general_model,settings.coding_model); pyexec=PythonExecutionManager(settings.trusted_paths,settings.python_timeout,store); terminal=TerminalManager(settings.terminal_timeout)
-openai_agent=OpenAIAgentsAdapter(settings.openai_model); rag=RAGManager(store); web=WebSearch(settings.web_timeout); computer=ComputerControlManager(); browser=BrowserManager(); mcp=MCPManager(); voice=VoiceManager(); vision=VisionManager(); scheduler=Scheduler(store,events)
+openai_agent=OpenAIAgentsAdapter(settings.openai_model); rag=RAGManager(store); web=WebSearch(settings.web_timeout); computer=ComputerControlManager(events); browser=BrowserManager(); mcp=MCPManager(); voice=VoiceManager(); vision=VisionManager(); scheduler=Scheduler(store,events)
 policy=load_policy(Path(__file__).resolve().parents[2]); perms=PermissionManager(policy)
 agent_manager=build_agent_manager(settings.general_model,settings.coding_model,settings.max_subagents,settings.max_parallel_agents,settings.max_agent_depth)
 agent=JarvisAgent(settings,store,cache,ollama,router,pyexec,terminal,rag,web,computer,browser,mcp,voice,vision,perms,scheduler,events,openai_agent,agent_manager=agent_manager)
