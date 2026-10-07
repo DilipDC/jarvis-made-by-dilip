@@ -23,7 +23,7 @@ airllm = ["airllm>=4,<5"]
 voice = ["SpeechRecognition>=3.10,<4", "pyttsx3>=2.90,<3"]
 browser = ["playwright>=1.59,<2"]
 mcp = ["mcp>=2,<3"]
-computer = ["pyautogui>=0.9,<1", "pyperclip>=1.9,<2"]
+computer = ["pyautogui>=0.9,<1", "pyperclip>=1.9,<2", "mss>=9,<11"]
 rag = ["sentence-transformers>=4,<6"]
 test = ["pytest>=8,<9"]
 
