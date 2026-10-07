@@ -59,7 +59,8 @@ async function resolveConfirmation(id,approved,wrap,approve,cancel){
       method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({approved})
     })).json();
     wrap.remove();
-    if(r.result?.text)add('assistant',r.result.text);
+    const resultText=r.result?.stdout||r.result?.stderr||r.result?.text;
+    if(resultText)add('assistant',resultText);
     else if(r.text)add('assistant',r.text);
     else if(r.error)add('system','Confirmation error: '+r.error);
     $('#liveText').textContent=approved?'Approved and executed':'Action cancelled';
