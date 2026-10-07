@@ -95,7 +95,10 @@ VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,la
             return {"kind":"persistent","entries":r["entries"],"bytes":r["bytes"],"max_bytes":self.max_bytes,"path":str(self.path)}
 
 class CacheManager:
-    def __init__(self,temp_max_entries=128,temp_max_bytes=4*1024*1024,persistent_max_bytes=16*1024*1024,root="data/cache"):
+    def __init__(self,temp_max_entries=128,temp_max_bytes=4*1024*1024,persistent_max_bytes=16*1024*1024,root="data/cache",max_entries=None,max_bytes=None):
+        # max_entries/max_bytes are retained as compatibility aliases for the public API.
+        if max_entries is not None: temp_max_entries=max_entries
+        if max_bytes is not None: temp_max_bytes=max_bytes
         root=Path(root); self.temp=TempCache(temp_max_entries,temp_max_bytes); self.persistent=PersistentCache(root/"persistent",persistent_max_bytes); (root/"temp").mkdir(parents=True,exist_ok=True)
     @staticmethod
     def key(namespace,*parts):
