@@ -87,6 +87,29 @@ class JarvisAgent:
             if not q:return {"text":"What should I search for?","intent":"browser_search"}
             r=browser_search(q);return {"text":f"Opened the browser and searched for: {q}","intent":"browser_search","result":r}
 
+        if intent=="computer_workflow":
+            m=re.search(r"(?:open|launch)\\s+(?:the\\s+)?(editor|vscode|vs code|notepad|gedit).*?(?:type|write|add|paste)\\s+(.+)$",text,re.I|re.S)
+            if not m:
+                return {"text":"Tell me the editor and the code/text to enter.","intent":"computer_workflow"}
+            app_name=m.group(1)
+            payload=m.group(2).strip()
+            d=self.perms.check("terminal",f"desktop workflow: open {app_name} and type content")
+            if d.level!="SAFE":
+                def run_workflow():
+                    self.computer.act("open_app",name=app_name)
+                    time.sleep(1.2)
+                    self.computer.act("type",text=payload)
+                    return {"application":app_name,"typed":True}
+                cid=self._confirmation("desktop workflow",app_name,d.reason,run_workflow)
+                self.tasks.update(task_id,"WAITING_CONFIRMATION",detail="Waiting for editor workflow approval")
+                return {"text":f"Confirmation required before opening {app_name} and typing the requested content.","intent":"computer_workflow","confirmation_id":cid}
+            self._emit("computer.workflow",state="OPENING",application=app_name)
+            self.computer.act("open_app",name=app_name)
+            time.sleep(1.2)
+            self._emit("computer.workflow",state="TYPING",application=app_name)
+            self.computer.act("type",text=payload)
+            return {"text":f"Opened {app_name} and typed the requested content.","intent":"computer_workflow","application":app_name}
+
         if intent=="computer":
             m=re.search(r'click\s+(\d+)\s+(\d+)',text,re.I)
             if m:action,args="click",{"x":int(m.group(1)),"y":int(m.group(2))}
