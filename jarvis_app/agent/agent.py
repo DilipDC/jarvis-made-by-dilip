@@ -184,8 +184,8 @@ class JarvisAgent:
         text = (text or "").strip()
         if not text:
             return {"text": "Tell me what you want me to do.", "intent": "chat"}
-        task = self.tasks.create(text) if hasattr(self.tasks, "create") else None
-        task_id = task.get("id") if isinstance(task, dict) else None
+        task = self.tasks.create(text)
+        task_id = task.task_id
         intent = classify(text)
         self._emit("agent.state", state="THINKING", intent=intent)
         try:
