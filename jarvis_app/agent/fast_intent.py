@@ -11,6 +11,22 @@ RULES=[ ("computer_workflow", re.compile(r"\b(?:open|launch)\s+(?:the\s+)?(?:edi
  ('python', re.compile(r'\b(execute|run|start)\s+[\w./\\-]+\.py\b',re.I)),
  ('computer', re.compile(r'\b(click|double click|type|press|hotkey|move mouse|screenshot|control (my|the) (computer|desktop)|control windows|control linux)\b',re.I)),
  ('browser_search', re.compile(r'\b(open|launch)\s+(the\s+)?(browser|chrome|firefox|edge)\s+(and\s+)?(search|look up)\b',re.I)),
+ ('open_app', re.compile(r'^\s*(open|launch|start)\s+(?:the\s+)?(?:firefox|chrome|google chrome|edge|vscode|vs code|notepad|gedit|terminal|calculator|file manager|browser)\s*
+ ('list_tasks', re.compile(r'\b(task status|running tasks|python tasks|list tasks)\b',re.I)),
+ ('terminal', re.compile(r'^\s*(run|execute)\s+(command|terminal)\b',re.I)),
+ ('status', re.compile(r'\b(system status|jarvis status|health|diagnostics|doctor)\b',re.I)),
+]
+
+def classify(text:str)->str:
+    for n,p in RULES:
+        if p.search(text): return n
+    if re.search(r'\b(latest|current|today|price|weather|news|documentation|search the web|search online|search for|look up|stock|share price)\b',text,re.I):
+        return 'web'
+    if re.search(r'\b(delete|shutdown|reboot|kill process|stop process|firewall|send message|run command)\b',text,re.I): return 'sensitive'
+    if re.search(r'\b(explain|fix|debug|code|coding|python|javascript|typescript|program)\b', text, re.I): return 'coding'
+    if re.search(r'\b(plan|build|implement|steps|multiple tasks|do all of this)\b',text,re.I): return 'planning'
+    return 'chat'
+,re.I)),
  ('list_tasks', re.compile(r'\b(task status|running tasks|python tasks|list tasks)\b',re.I)),
  ('terminal', re.compile(r'^\s*(run|execute)\s+(command|terminal)\b',re.I)),
  ('status', re.compile(r'\b(system status|jarvis status|health|diagnostics|doctor)\b',re.I)),
