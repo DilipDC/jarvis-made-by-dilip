@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 
 RULES=[
- ('reminder', re.compile(r'\b(remind me|reminder|remind)\b',re.I)),
+ ('reminder', re.compile(r'\b(remind me|reminder|remind|set (?:an )?alarm|remember(?: this)?\b.*\bat\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b',re.I)),
  ('ram', re.compile(r'\b(ram|memory usage|memory percentage)\b',re.I)),
  ('cpu', re.compile(r'\b(cpu|processor usage|cpu usage)\b',re.I)),
  ('time', re.compile(r'\b(what time|current time|time now)\b',re.I)),
