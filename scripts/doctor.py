@@ -15,6 +15,7 @@ def main():
     check("PyTorch", importlib.util.find_spec("torch") is not None, "AirLLM dependency")
     check("npx", shutil.which("npx") is not None, "MCP stdio servers")
     check("Ollama", shutil.which("ollama") is not None or bool(os.getenv("OLLAMA_URL")), "fallback backend")
+    check("Open Interpreter", shutil.which("interpreter") is not None, "Linux computer/coding agent bridge")
     try:
         import torch
         print(f"[INFO] torch={torch.__version__} cuda={torch.cuda.is_available()}")
