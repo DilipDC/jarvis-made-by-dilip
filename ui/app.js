@@ -18,6 +18,7 @@ async function ask(t){
     answer.textContent=r.text||'Done.';state.textContent=(r.agent||r.intent||'READY').toUpperCase();
     $('#agentState').textContent=r.agent||r.research_agent||'verified response';
     $('#liveText').textContent=(r.research_agent?'Research: '+r.research_agent:'Task completed');
+    if(r.confirmation_id) showConfirmation(r.confirmation_id,r.text||'Confirmation required before this action.');
     speak(r.text||'Done.');
   }catch(e){state.textContent='ERROR';answer.textContent='Request failed';add('system','Request failed: '+e);$('#liveText').textContent='Request failed'}
   refresh();refreshReminder();
@@ -36,6 +37,40 @@ mic.onclick=()=>{
   r.onend=()=>{state.textContent='IDLE';mic.classList.remove('listening')};r.start();
 };
 
+function showConfirmation(id,message){
+  const wrap=document.createElement('div');
+  wrap.className='confirmation';
+  const text=document.createElement('div');
+  text.className='confirmation-text';
+  text.textContent=message;
+  const approve=document.createElement('button');
+  approve.textContent='APPROVE';
+  const cancel=document.createElement('button');
+  cancel.textContent='CANCEL';
+  approve.onclick=()=>resolveConfirmation(id,true,wrap,approve,cancel);
+  cancel.onclick=()=>resolveConfirmation(id,false,wrap,approve,cancel);
+  wrap.appendChild(text);wrap.appendChild(approve);wrap.appendChild(cancel);
+  messages.appendChild(wrap);messages.scrollTop=messages.scrollHeight;
+}
+async function resolveConfirmation(id,approved,wrap,approve,cancel){
+  approve.disabled=true;cancel.disabled=true;state.textContent=approved?'EXECUTING':'CANCELLED';
+  try{
+    const r=await (await fetch('/api/confirmations/'+encodeURIComponent(id),{
+      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({approved})
+    })).json();
+    wrap.remove();
+    if(r.result?.text)add('assistant',r.result.text);
+    else if(r.text)add('assistant',r.text);
+    else if(r.error)add('system','Confirmation error: '+r.error);
+    $('#liveText').textContent=approved?'Approved and executed':'Action cancelled';
+    speak(r.result?.text||r.text|| (approved?'Approved.':'Cancelled.'));
+  }catch(e){
+    approve.disabled=false;cancel.disabled=false;
+    add('system','Confirmation request failed: '+e);
+    $('#liveText').textContent='Confirmation failed';
+  }
+  refresh();
+}
 function connectEvents(){
   try{
     socket=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/events');
